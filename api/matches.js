@@ -11,7 +11,7 @@ const setCorsHeaders = (res) => {
 
 module.exports = async (req, res) => {
     setCorsHeaders(res);
-    
+
     // Si es un preflight request de CORS (OPTIONS) respondemos status 200
     if (req.method === 'OPTIONS') {
         res.status(200).end();
@@ -20,11 +20,11 @@ module.exports = async (req, res) => {
 
     try {
         console.log('Iniciando Chromium...');
-        
+
         // Optimizar para el runtime serverless de Vercel
         chromium.setHostedMode = true;
-        
-        const executablePath = await chromium.executablePath;
+
+        const executablePath = await chromium.executablePath();
 
         const browser = await puppeteer.launch({
             args: chromium.args,
@@ -35,21 +35,21 @@ module.exports = async (req, res) => {
 
         const page = await browser.newPage();
         console.log('Navegando a LibrefutbolTV...');
-        
+
         // Timeout generoso
-        await page.goto('https://librefutboltv.su/home1/agenda/', { 
-            waitUntil: 'networkidle2', 
-            timeout: 30000 
+        await page.goto('https://librefutboltv.su/home1/agenda/', {
+            waitUntil: 'networkidle2',
+            timeout: 30000
         });
 
         console.log('Extrayendo los partidos...');
-        
+
         const extractedMatches = await page.evaluate(() => {
             const matchesList = [];
             // Seleccionamos los LI que tengan tiempo o estructura de partido.
             // Para abarcar el mayor espectro adaptado del código original "main.js" de Electron.
             const listItems = document.querySelectorAll('ul.menu > li, li:has(span.t)');
-            
+
             listItems.forEach(item => {
                 const mainLink = item.querySelector('a:first-child');
                 if (!mainLink) return;
@@ -62,9 +62,9 @@ module.exports = async (req, res) => {
 
                 if (!title || title.length < 3) return;
 
-                const streamLink = item.querySelector('ul a[href]:not([href="#"])') || 
-                                   item.querySelector('a[href]:not([href="#"]):not(:first-child)');
-                
+                const streamLink = item.querySelector('ul a[href]:not([href="#"])') ||
+                    item.querySelector('a[href]:not([href="#"]):not(:first-child)');
+
                 let url = null;
                 let available = true;
 
@@ -89,9 +89,9 @@ module.exports = async (req, res) => {
         });
 
         await browser.close();
-        
+
         console.log(`Partidos extraídos: ${extractedMatches.length}`);
-        
+
         // Responder con la lista en formato JSON
         res.status(200).json({
             success: true,
@@ -101,10 +101,10 @@ module.exports = async (req, res) => {
 
     } catch (error) {
         console.error('Error durante el scraping:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Error extrayendo los partidos', 
-            error: error.message 
+        res.status(500).json({
+            success: false,
+            message: 'Error extrayendo los partidos',
+            error: error.message
         });
     }
 };
